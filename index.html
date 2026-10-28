@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Mentor Stickers</title>
+<script src="https://res.cdn.office.net/teams-js/2.31.1/js/MicrosoftTeams.min.js" crossorigin="anonymous"></script>
+<style>
+  :root {
+    --bg: #f5f6fa; --card: #ffffff; --text: #1b2656; --muted: #6b7280;
+    --border: #e3e6ef; --accent: #4f6bed; --toast: #1b2656; --toast-text: #fff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1f1f1f; --card: #2b2b2b; --text: #f0f0f0; --muted: #a0a0a0;
+      --border: #3a3a3a; --accent: #7f8cf5; --toast: #f0f0f0; --toast-text: #1f1f1f;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1f1f1f; --card: #2b2b2b; --text: #f0f0f0; --muted: #a0a0a0;
+    --border: #3a3a3a; --accent: #7f8cf5; --toast: #f0f0f0; --toast-text: #1f1f1f;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font-family: "Segoe UI", -apple-system, "Microsoft JhengHei", "PingFang TC", sans-serif; }
+  header { padding: 20px 20px 8px; }
+  h1 { margin: 0 0 4px; font-size: 20px; }
+  p.hint { margin: 0; color: var(--muted); font-size: 14px; }
+  .search { padding: 12px 20px 4px; }
+  .search input { width: 100%; max-width: 360px; padding: 8px 12px; font-size: 14px;
+    color: var(--text); background: var(--card); border: 1px solid var(--border); border-radius: 8px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px; padding: 12px 20px 40px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 10px; cursor: pointer; text-align: center; transition: transform .12s, border-color .12s;
+    display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .card:hover, .card:focus-visible { transform: translateY(-2px); border-color: var(--accent); outline: none; }
+  .card img { width: 100%; height: 130px; object-fit: contain; }
+  .card .name { font-size: 12px; color: var(--muted); }
+  .card a { font-size: 12px; color: var(--accent); text-decoration: none; }
+  .card a:hover { text-decoration: underline; }
+  .empty { display: none; padding: 20px; color: var(--muted); }
+  #toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px);
+    background: var(--toast); color: var(--toast-text); padding: 10px 18px; border-radius: 999px;
+    font-size: 14px; opacity: 0; pointer-events: none; transition: all .2s; max-width: 90vw; text-align: center; }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+</style>
+</head>
+<body>
+<header>
+  <h1>AI Mentor Stickers</h1>
+  <p class="hint">點一下貼圖即可複製，回到聊天框按 Ctrl+V（Mac：⌘V）貼上；也可以直接拖曳到聊天框。</p>
+</header>
+<div class="search"><input id="q" type="search" placeholder="搜尋貼圖，例如 thanks、done" aria-label="搜尋貼圖"></div>
+<main class="grid" id="grid"></main>
+<div class="empty" id="empty">找不到符合的貼圖</div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+const STICKERS = [
+  ["done","Done"],["noted","Noted"],["ok","OK"],["perfect","Perfect"],
+  ["thanks","Thanks"],["thanks-a-lot","Thanks a lot"],["hey","Hey"],["see-you","See you"],
+  ["lets-go","Let's go"],["go-go-go","Go go go"],["keep-it-up","Keep it up"],["mission-complete","Mission complete"],
+  ["let-me-think","Let me think"],["working-on-it","Working on it"],["focusing","Focusing"],["leave-it-to-me","Leave it to me"],
+  ["why","Why"]
+];
+
+// Teams 主題同步（在瀏覽器直接開啟時會略過）
+try {
+  microsoftTeams.app.initialize().then(() => {
+    const apply = t => { if (t === "dark" || t === "contrast") document.documentElement.dataset.theme = "dark";
+      else if (t === "default") document.documentElement.dataset.theme = "light"; };
+    microsoftTeams.app.getContext().then(c => apply(c.app.theme));
+    microsoftTeams.app.registerOnThemeChangeHandler(apply);
+  }).catch(() => {});
+} catch (e) {}
+
+const grid = document.getElementById("grid");
+const toast = document.getElementById("toast");
+let toastTimer;
+function say(msg) {
+  toast.textContent = msg; toast.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove("show"), 2200);
+}
+
+async function copySticker(id, label) {
+  const url = `${id}.png`;
+  try {
+    if (!navigator.clipboard || !window.ClipboardItem) throw new Error("no clipboard api");
+    const blob = await fetch(url).then(r => r.blob());
+    await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+    say(`已複製「${label}」，到聊天框貼上即可`);
+  } catch (err) {
+    say("此環境不允許自動複製：請對圖片按右鍵複製，或用「下載」");
+  }
+}
+
+STICKERS.forEach(([id, label]) => {
+  const card = document.createElement("div");
+  card.className = "card"; card.tabIndex = 0; card.dataset.key = (id + " " + label).toLowerCase();
+  card.innerHTML = `<img src="${id}.png" alt="${label}" draggable="true" loading="lazy">
+    <div class="name">${label}</div><a href="${id}.png" download="${id}.png">下載</a>`;
+  card.addEventListener("click", e => { if (e.target.tagName !== "A") copySticker(id, label); });
+  card.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); copySticker(id, label); } });
+  grid.appendChild(card);
+});
+
+document.getElementById("q").addEventListener("input", e => {
+  const k = e.target.value.trim().toLowerCase(); let shown = 0;
+  grid.querySelectorAll(".card").forEach(c => { const hit = !k || c.dataset.key.includes(k); c.style.display = hit ? "" : "none"; if (hit) shown++; });
+  document.getElementById("empty").style.display = shown ? "none" : "block";
+});
+</script>
+</body>
+</html>
