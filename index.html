@@ -29,6 +29,10 @@
   .search { padding: 12px 20px 4px; }
   .search input { width: 100%; max-width: 360px; padding: 8px 12px; font-size: 14px;
     color: var(--text); background: var(--card); border: 1px solid var(--border); border-radius: 8px; }
+  .tabs { display: flex; gap: 8px; padding: 8px 20px 0; flex-wrap: wrap; }
+  .tab { border: 1px solid var(--border); background: var(--card); color: var(--text); padding: 6px 16px;
+    border-radius: 999px; font-size: 14px; cursor: pointer; }
+  .tab[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 12px; padding: 12px 20px 40px; }
   .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px;
@@ -52,17 +56,29 @@
   <p class="hint">點一下貼圖即可複製，回到聊天框按 Ctrl+V（Mac：⌘V）貼上；也可以直接拖曳到聊天框。</p>
 </header>
 <div class="search"><input id="q" type="search" placeholder="搜尋貼圖，例如 thanks、done" aria-label="搜尋貼圖"></div>
+<div class="tabs" id="tabs">
+  <button class="tab" data-lang="all" aria-pressed="true">全部</button>
+  <button class="tab" data-lang="en" aria-pressed="false">English</button>
+  <button class="tab" data-lang="zh" aria-pressed="false">中文</button>
+</div>
 <main class="grid" id="grid"></main>
 <div class="empty" id="empty">找不到符合的貼圖</div>
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script>
 const STICKERS = [
-  ["done","Done"],["noted","Noted"],["ok","OK"],["perfect","Perfect"],
-  ["thanks","Thanks"],["thanks-a-lot","Thanks a lot"],["hey","Hey"],["see-you","See you"],
-  ["lets-go","Let's go"],["go-go-go","Go go go"],["keep-it-up","Keep it up"],["mission-complete","Mission complete"],
-  ["let-me-think","Let me think"],["working-on-it","Working on it"],["focusing","Focusing"],["leave-it-to-me","Leave it to me"],
-  ["why","Why"]
+  // [檔名, 顯示名稱, 語言, 搜尋關鍵字]
+  ["done","Done","en",""],["noted","Noted","en",""],["ok","OK","en",""],["perfect","Perfect","en",""],
+  ["thanks","Thanks","en",""],["thanks-a-lot","Thanks a lot","en",""],["hey","Hey","en",""],["see-you","See you","en",""],
+  ["lets-go","Let's go","en",""],["go-go-go","Go go go","en",""],["keep-it-up","Keep it up","en",""],["mission-complete","Mission complete","en",""],
+  ["let-me-think","Let me think","en",""],["working-on-it","Working on it","en",""],["focusing","Focusing","en",""],["leave-it-to-me","Leave it to me","en",""],
+  ["why","Why","en",""],
+  ["zh-hao-de","好的","zh","好的 ok"],["zh-yi-ji-lu","已記錄","zh","已记录 noted"],["zh-gao-ding","搞定","zh","done"],
+  ["zh-xie-xie","謝謝","zh","谢谢 thanks"],["zh-xin-ku-le","辛苦了","zh","thanks a lot"],["zh-ni-hao","你好","zh","hey hello"],
+  ["zh-zai-jian","再見","zh","再见 see you bye"],["zh-chu-fa","出發","zh","出发 lets go"],["zh-chong-chong-chong","衝衝衝","zh","冲冲冲 go go go"],
+  ["zh-jia-you","加油","zh","keep it up"],["zh-wan-cheng","完成","zh","mission complete"],["zh-wo-xiang-xiang","我想想","zh","let me think"],
+  ["zh-chu-li-zhong","處理中","zh","处理中 working on it"],["zh-zhuan-zhu-zhong","專注中","zh","专注中 focusing"],["zh-kan-wo-de","看我的","zh","leave it to me"],
+  ["zh-zen-me-le","怎麼了","zh","怎么了 why"],["zh-hen-hao","很好","zh","perfect"]
 ];
 
 // Teams 主題同步（在瀏覽器直接開啟時會略過）
@@ -95,9 +111,10 @@ async function copySticker(id, label) {
   }
 }
 
-STICKERS.forEach(([id, label]) => {
+STICKERS.forEach(([id, label, lang, extra]) => {
   const card = document.createElement("div");
-  card.className = "card"; card.tabIndex = 0; card.dataset.key = (id + " " + label).toLowerCase();
+  card.className = "card"; card.tabIndex = 0; card.dataset.lang = lang;
+  card.dataset.key = (id + " " + label + " " + extra).toLowerCase();
   card.innerHTML = `<img src="${id}.png" alt="${label}" draggable="true" loading="lazy">
     <div class="name">${label}</div><a href="${id}.png" download="${id}.png">下載</a>`;
   card.addEventListener("click", e => { if (e.target.tagName !== "A") copySticker(id, label); });
@@ -105,11 +122,21 @@ STICKERS.forEach(([id, label]) => {
   grid.appendChild(card);
 });
 
-document.getElementById("q").addEventListener("input", e => {
-  const k = e.target.value.trim().toLowerCase(); let shown = 0;
-  grid.querySelectorAll(".card").forEach(c => { const hit = !k || c.dataset.key.includes(k); c.style.display = hit ? "" : "none"; if (hit) shown++; });
+let currentLang = "all";
+function applyFilter() {
+  const k = document.getElementById("q").value.trim().toLowerCase(); let shown = 0;
+  grid.querySelectorAll(".card").forEach(c => {
+    const hit = (currentLang === "all" || c.dataset.lang === currentLang) && (!k || c.dataset.key.includes(k));
+    c.style.display = hit ? "" : "none"; if (hit) shown++;
+  });
   document.getElementById("empty").style.display = shown ? "none" : "block";
-});
+}
+document.getElementById("q").addEventListener("input", applyFilter);
+document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => {
+  currentLang = t.dataset.lang;
+  document.querySelectorAll(".tab").forEach(x => x.setAttribute("aria-pressed", x === t ? "true" : "false"));
+  applyFilter();
+}));
 </script>
 </body>
 </html>
