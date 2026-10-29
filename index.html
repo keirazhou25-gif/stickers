@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-Hant">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -53,32 +53,34 @@
 <body>
 <header>
   <h1>AI Mentor Stickers</h1>
-  <p class="hint">點一下貼圖即可複製，回到聊天框按 Ctrl+V（Mac：⌘V）貼上；也可以直接拖曳到聊天框。</p>
+  <p class="hint">Click a sticker to copy it, then paste it into the chat box (Ctrl+V / ⌘V). You can also drag it straight into the chat. GIFs: right-click → Copy image, or drag into the chat.</p>
 </header>
-<div class="search"><input id="q" type="search" placeholder="搜尋貼圖，例如 thanks、done" aria-label="搜尋貼圖"></div>
+<div class="search"><input id="q" type="search" placeholder="Search stickers, e.g. thanks, done" aria-label="Search stickers"></div>
 <div class="tabs" id="tabs">
-  <button class="tab" data-lang="all" aria-pressed="true">全部</button>
+  <button class="tab" data-lang="all" aria-pressed="true">All</button>
   <button class="tab" data-lang="en" aria-pressed="false">English</button>
   <button class="tab" data-lang="zh" aria-pressed="false">中文</button>
+  <button class="tab" data-lang="gif" aria-pressed="false">GIF</button>
 </div>
 <main class="grid" id="grid"></main>
-<div class="empty" id="empty">找不到符合的貼圖</div>
+<div class="empty" id="empty">No stickers found</div>
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script>
 const STICKERS = [
-  // [檔名, 顯示名稱, 語言, 搜尋關鍵字]
-  ["done","Done","en",""],["noted","Noted","en",""],["ok","OK","en",""],["perfect","Perfect","en",""],
-  ["thanks","Thanks","en",""],["thanks-a-lot","Thanks a lot","en",""],["hey","Hey","en",""],["see-you","See you","en",""],
-  ["lets-go","Let's go","en",""],["go-go-go","Go go go","en",""],["keep-it-up","Keep it up","en",""],["mission-complete","Mission complete","en",""],
-  ["let-me-think","Let me think","en",""],["working-on-it","Working on it","en",""],["focusing","Focusing","en",""],["leave-it-to-me","Leave it to me","en",""],
-  ["why","Why","en",""],
-  ["zh-hao-de","好的","zh","好的 ok"],["zh-yi-ji-lu","已記錄","zh","已记录 noted"],["zh-gao-ding","搞定","zh","done"],
-  ["zh-xie-xie","謝謝","zh","谢谢 thanks"],["zh-xin-ku-le","辛苦了","zh","thanks a lot"],["zh-ni-hao","你好","zh","hey hello"],
-  ["zh-zai-jian","再見","zh","再见 see you bye"],["zh-chu-fa","出發","zh","出发 lets go"],["zh-chong-chong-chong","衝衝衝","zh","冲冲冲 go go go"],
-  ["zh-jia-you","加油","zh","keep it up"],["zh-wan-cheng","完成","zh","mission complete"],["zh-wo-xiang-xiang","我想想","zh","let me think"],
-  ["zh-chu-li-zhong","處理中","zh","处理中 working on it"],["zh-zhuan-zhu-zhong","專注中","zh","专注中 focusing"],["zh-kan-wo-de","看我的","zh","leave it to me"],
-  ["zh-zen-me-le","怎麼了","zh","怎么了 why"],["zh-hen-hao","很好","zh","perfect"]
+  // [file, label, group, search keywords, English meaning (for 中文), extension]
+  ["done","Done","en","","","png"],["noted","Noted","en","","","png"],["ok","OK","en","","","png"],["perfect","Perfect","en","","","png"],
+  ["thanks","Thanks","en","","","png"],["thanks-a-lot","Thanks a lot","en","","","png"],["hey","Hey","en","","","png"],["see-you","See you","en","","","png"],
+  ["lets-go","Let's go","en","","","png"],["go-go-go","Go go go","en","","","png"],["keep-it-up","Keep it up","en","","","png"],["mission-complete","Mission complete","en","","","png"],
+  ["let-me-think","Let me think","en","","","png"],["working-on-it","Working on it","en","","","png"],["focusing","Focusing","en","","","png"],["leave-it-to-me","Leave it to me","en","","","png"],
+  ["why","Why","en","","","png"],
+  ["zh-hao-de","好的","zh","好的 ok","OK","png"],["zh-yi-ji-lu","已記錄","zh","已记录 noted","Noted","png"],["zh-gao-ding","搞定","zh","done","Done","png"],
+  ["zh-xie-xie","謝謝","zh","谢谢 thanks","Thanks","png"],["zh-xin-ku-le","辛苦了","zh","thanks a lot hard work","Thanks for the hard work","png"],["zh-ni-hao","你好","zh","hey hello","Hey","png"],
+  ["zh-zai-jian","再見","zh","再见 see you bye","See you","png"],["zh-chu-fa","出發","zh","出发 lets go","Let's go","png"],["zh-chong-chong-chong","衝衝衝","zh","冲冲冲 go go go","Go go go","png"],
+  ["zh-jia-you","加油","zh","keep it up","Keep it up","png"],["zh-wan-cheng","完成","zh","mission complete","Mission complete","png"],["zh-wo-xiang-xiang","我想想","zh","let me think","Let me think","png"],
+  ["zh-chu-li-zhong","處理中","zh","处理中 working on it","Working on it","png"],["zh-zhuan-zhu-zhong","專注中","zh","专注中 focusing","Focusing","png"],["zh-kan-wo-de","看我的","zh","leave it to me","Leave it to me","png"],
+  ["zh-zen-me-le","怎麼了","zh","怎么了 why","Why","png"],["zh-hen-hao","很好","zh","perfect","Perfect","png"],
+  ["crying","Crying","gif","cry sad tears","","gif"]
 ];
 
 // Teams 主題同步（在瀏覽器直接開啟時會略過）
@@ -105,20 +107,25 @@ async function copySticker(id, label) {
     if (!navigator.clipboard || !window.ClipboardItem) throw new Error("no clipboard api");
     const blob = await fetch(url).then(r => r.blob());
     await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-    say(`已複製「${label}」，到聊天框貼上即可`);
+    say(`Copied “${label}”. Paste it into the chat box.`);
   } catch (err) {
-    say("此環境不允許自動複製：請對圖片按右鍵複製，或用「下載」");
+    say("Auto-copy is blocked here. Right-click the image to copy it, or use Download.");
   }
 }
 
-STICKERS.forEach(([id, label, lang, extra]) => {
+STICKERS.forEach(([id, label, lang, extra, sub, ext]) => {
   const card = document.createElement("div");
   card.className = "card"; card.tabIndex = 0; card.dataset.lang = lang;
-  card.dataset.key = (id + " " + label + " " + extra).toLowerCase();
-  card.innerHTML = `<img src="${id}.png" alt="${label}" draggable="true" loading="lazy">
-    <div class="name">${label}</div><a href="${id}.png" download="${id}.png">下載</a>`;
-  card.addEventListener("click", e => { if (e.target.tagName !== "A") copySticker(id, label); });
-  card.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); copySticker(id, label); } });
+  card.dataset.key = (id + " " + label + " " + extra + " " + sub).toLowerCase();
+  const file = `${id}.${ext}`;
+  const title = sub ? `${label} · ${sub}` : label;
+  card.innerHTML = `<img src="${file}" alt="${title}" draggable="true" loading="lazy">
+    <div class="name">${title}</div><a href="${file}" download="${file}">Download</a>`;
+  const act = () => ext === "gif"
+    ? say("GIF: right-click → Copy image, or drag it into the chat box")
+    : copySticker(id, label);
+  card.addEventListener("click", e => { if (e.target.tagName !== "A") act(); });
+  card.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); act(); } });
   grid.appendChild(card);
 });
 
